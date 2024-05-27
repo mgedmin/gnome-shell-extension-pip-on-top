@@ -100,6 +100,10 @@ export default class PipOnTop extends Extension
       window._notifyPipTitleId = window.connect_after(
         'notify::title', this._checkTitle.bind(this));
     }
+    if (!window._notifyPipFullscreenId) {
+      window._notifyPipFullscreenId = window.connect_after(
+        'notify::fullscreen', this._checkTitle.bind(this));
+    }
     this._checkTitle(window);
   }
 
@@ -109,13 +113,17 @@ export default class PipOnTop extends Extension
       window.disconnect(window._notifyPipTitleId);
       window._notifyPipTitleId = null;
     }
+    if (window._notifyPipFullscreenId) {
+      window.disconnect(window._notifyPipFullscreenId);
+      window._notifyPipFullscreenId = null;
+    }
     if (window._isPipAble)
       window._isPipAble = null;
   }
 
   _checkTitle(window)
   {
-    if (!window.title)
+    if (!window.title /* && window.wm_class != 'mpv' */)
       return;
 
     /* Check both translated and untranslated string for
@@ -124,11 +132,13 @@ export default class PipOnTop extends Extension
       || window.title == _('Picture-in-Picture')
       || window.title == 'Picture in picture'
       || window.title == 'Picture-in-picture'
-      || window.title.endsWith(' - PiP')
+      || (window.title && window.title.endsWith(' - PiP'))
       /* Telegram support */
-      || window.title == 'TelegramDesktop');
+      || window.title == 'TelegramDesktop'
+      /* mg: mpv when not fullscreen */
+      || (window.wm_class == 'mpv' && !window.fullscreen));
 
-    if (isPipWin || window._isPipAble) {
+    if (isPipWin || window._isPipAble && isPipWin != window._isPipAble) {
       let un = (isPipWin) ? '' : 'un';
 
       window._isPipAble = true;
